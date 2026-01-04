@@ -1,25 +1,43 @@
 <?php 
-
 require_once '../functions.php';
-require_admin(); // YÊU CẦU QUYỀN ADMIN
+require_once '../connect.php'; 
+require_admin();
 
-include '../connect.php'; 
-
-// Kiểm tra ID và bảo mật
-if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
-    die("ID không hợp lệ!");
+// 1. Kiểm tra ID
+$id = (int)($_GET['id'] ?? 0);
+if ($id <= 0) {
+    set_session_message("ID danh mục không hợp lệ!", "danger");
+    header("Location: list.php");
+    exit();
 }
-$id = (int) $_GET["id"];
 
-// Dùng Prepared Statement để xóa dữ liệu
-$stmt = $conn->prepare("DELETE FROM categories WHERE id=?");
+// 2. KIỂM TRÀ RÀNG BUỘC (Rất quan trọng)
+// Kiểm tra xem có cuốn sách nào đang thuộc danh mục này không
+$check_stmt = $conn->prepare("SELECT COUNT(*) as book_count FROM books WHERE category_id = ?");
+$check_stmt->bind_param("i", $id);
+$check_stmt->execute();
+$result = $check_stmt->get_result()->fetch_assoc();
+
+if ($result['book_count'] > 0) {
+    // Không cho phép xóa nếu danh mục đang chứa sách
+    set_session_message("Không thể xóa! Danh mục này đang chứa <strong>{$result['book_count']}</strong> cuốn sách. Hãy chuyển sách sang danh mục khác trước.", "warning");
+    header("Location: list.php");
+    exit();
+}
+
+// 3. THỰC HIỆN XÓA
+$stmt = $conn->prepare("DELETE FROM categories WHERE id = ?");
 $stmt->bind_param("i", $id);
 
-if ($stmt->execute()) {
-    header("Location: list.php?success=delete");
-    exit();
-} else {
-    // Nếu xóa thất bại (ví dụ: có sách đang sử dụng danh mục này), hiển thị lỗi
-    die("Lỗi khi xóa danh mục: " . $conn->error);
+try {
+    if ($stmt->execute()) {
+        set_session_message("Đã xóa danh mục thành công.", "success");
+    } else {
+        throw new Exception($conn->error);
+    }
+} catch (Exception $e) {
+    set_session_message("Lỗi hệ thống: " . $e->getMessage(), "danger");
 }
-?>
+
+header("Location: list.php");
+exit();

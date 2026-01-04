@@ -1,33 +1,23 @@
 <?php
-// Bắt đầu bộ đệm đầu ra (Output Buffering) để tránh lỗi "headers already sent"
-// Điều này VÔ CÙNG QUAN TRỌNG để cho phép hàm header() (dùng cho redirect) hoạt động
+// functions.php
 ob_start();
 
-// Mã bí mật Admin (Dùng để tạo Admin đầu tiên qua Register Form)
-const ADMIN_SECRET_CODE = 'dacs2admin_secret'; 
+const ADMIN_SECRET_CODE = 'dacs2admin_secret';
 
-// 1. Hàm khởi động Session an toàn
+// 1. Khởi động Session
 function start_session_if_not_started() {
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
 }
 
-/**
- * Hàm chuyển hướng an toàn.
- * Luôn gọi exit; sau khi chuyển hướng để dừng script.
- * @param string $url URL đích
- */
+// 2. Chuyển hướng
 function redirect($url) {
     header("Location: " . $url);
     exit;
 }
 
-/**
- * Đặt thông báo flash vào session
- * @param string $message Nội dung thông báo
- * @param string $type Loại thông báo (success, danger, warning, info)
- */
+// 3. Quản lý thông báo Flash
 function set_session_message($message, $type = 'info') {
     start_session_if_not_started();
     $_SESSION['flash_message'] = [
@@ -36,71 +26,78 @@ function set_session_message($message, $type = 'info') {
     ];
 }
 
-/**
- * Hiển thị và xóa thông báo flash (session message).
- * Đã đổi tên từ show_session_message() thành display_session_message().
- *
- * @return string Mã HTML của thông báo hoặc chuỗi rỗng
- */
 function display_session_message() {
-    start_session_if_not_started();
-    if (isset($_SESSION['flash_message'])) {
-        $message = $_SESSION['flash_message']['content'];
-        $type = $_SESSION['flash_message']['type'];
+    if (isset($_SESSION['message'])) {
+        $message = $_SESSION['message'];
+        $type = $_SESSION['message_type'] ?? 'info';
         
-        // Chọn icon Bootstrap phù hợp
-        $icon = match ($type) {
-            'success' => 'check-circle-fill',
-            'danger' => 'x-octagon-fill',
-            'warning' => 'exclamation-triangle-fill',
-            default => 'info-circle-fill',
-        };
+        // Xóa ngay để khi F5 không hiện lại
+        unset($_SESSION['message']);
+        unset($_SESSION['message_type']);
 
-        // Tạo mã HTML cho alert Bootstrap
-        $output = '<div class="alert alert-' . htmlspecialchars($type) . ' alert-dismissible fade show container mt-3" role="alert">
-                      <i class="bi-' . $icon . ' me-2"></i>
-                      ' . htmlspecialchars($message) . '
-                      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                   </div>';
-        
-        // Xóa thông báo khỏi session
-        unset($_SESSION['flash_message']);
-        
-        return $output;
+        // Thêm id="session-alert" để JavaScript tìm thấy
+        return '<div id="session-alert" class="alert alert-' . $type . ' alert-dismissible fade show shadow-sm border-0" role="alert">
+                    <i class="bi bi-info-circle-fill me-2"></i>' . $message . '
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>';
     }
     return '';
 }
 
-// 2. Hàm kiểm tra và yêu cầu quyền Admin (Đã có logic kiểm tra thực tế)
+// 4. Phân quyền
 function require_admin() {
     start_session_if_not_started();
-    
-    // Kiểm tra session user_id và role
     if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? 'user') !== 'admin') {
-        // Đặt thông báo lỗi và chuyển hướng người dùng không có quyền
-        set_session_message('Bạn không có quyền truy cập vào trang quản trị.', 'danger');
-        redirect('../index.php');
+        set_session_message('Bạn không có quyền truy cập vào trang này.', 'danger');
+        redirect('/index.php'); // Đảm bảo đường dẫn này đúng với project của bạn
     }
 }
 
-// 3. Hàm kiểm tra xem người dùng đã đăng nhập hay chưa
+// 5. Định dạng dữ liệu
+function format_date($date) {
+    if (empty($date) || $date === '0000-00-00' || $date === '1970-01-01') return '---';
+    return date('d/m/Y', strtotime($date));
+}
+
+/**
+ * 6. Hàm xử lý Upload ảnh bìa sách (Chỉ dùng PHP thuần)
+ * Trả về tên file mới hoặc false nếu lỗi
+ */
+function upload_cover($file_input) {
+    if (!isset($file_input) || $file_input['error'] !== UPLOAD_ERR_OK) return false;
+
+    $target_dir = __DIR__ . "/../uploads/covers/";
+    if (!is_dir($target_dir)) mkdir($target_dir, 0777, true);
+
+    $file_ext = strtolower(pathinfo($file_input['name'], PATHINFO_EXTENSION));
+    $allowed_exts = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+
+    if (in_array($file_ext, $allowed_exts)) {
+        $new_filename = "cover_" . uniqid() . "." . $file_ext;
+        $target_file = $target_dir . $new_filename;
+        
+        if (move_uploaded_file($file_input['tmp_name'], $target_file)) {
+            return "/uploads/covers/" . $new_filename;
+        }
+    }
+    return false;
+}
+
+//7. Kiểm tra trạng thái quá hạn
+
+function check_overdue($due_date, $status) {
+    if ($status === 'Returned') return false;
+    return strtotime($due_date) < strtotime(date('Y-m-d'));
+}
+
+// 8. Hàm kiểm tra xem người dùng đã đăng nhập hay chưa
 function is_logged_in() {
     start_session_if_not_started();
     return isset($_SESSION['user_id']);
 }
 
-// 4. Hàm lấy vai trò hiện tại
+// 9. Hàm lấy vai trò hiện tại
 function get_user_role() {
     start_session_if_not_started();
     return $_SESSION['role'] ?? 'guest'; // Mặc định là khách
-}
-
-// 5. Hàm định dạng ngày tháng từ yyyy-mm-dd sang dd/mm/yyyy
-function format_date(string $date): string 
-{
-    if (empty($date) || $date === '0000-00-00') {
-        return '';
-    }
-    // Chuyển đổi từ YYYY-MM-DD sang timestamp, sau đó sang DD/MM/YYYY
-    return date('d/m/Y', strtotime($date));
 }

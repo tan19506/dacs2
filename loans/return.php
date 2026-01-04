@@ -34,11 +34,11 @@ if ($raw_loan_id === null) {
 $loan_id = intval($raw_loan_id);
 $current_user_id = $_SESSION['user_id'];
 $is_admin = get_user_role() === 'admin';
-$redirect_url = $is_admin ? '/Admin/loans.php' : '/index.php'; // Chuyển hướng khác nhau cho Admin/User
+$redirect_url = $is_admin ? 'list.php' : '/index.php'; // Chuyển hướng khác nhau cho Admin/User
 
 // 2. LẤY THÔNG TIN HỒ SƠ MƯỢN
 try {
-    $sql_loan = "SELECT book_id, user_id FROM loans WHERE id = :loan_id AND status = 'borrowed'";
+    $sql_loan = "SELECT book_id, user_id FROM loans WHERE id = :loan_id AND status = 'Borrowed'";
     $stmt_loan = $pdo->prepare($sql_loan);
     $stmt_loan->execute(['loan_id' => $loan_id]);
     $loan = $stmt_loan->fetch(PDO::FETCH_ASSOC);
@@ -47,7 +47,7 @@ try {
 
     // Nếu không tìm thấy trong bảng `loans`, thử trong bảng `borrowings` (một số nơi trong project dùng borrowings)
     if (!$loan) {
-        $sql_b = "SELECT id, book_id, user_id FROM borrowings WHERE id = :loan_id AND status = 'borrowed'";
+        $sql_b = "SELECT id, book_id, user_id FROM borrowings WHERE id = :loan_id AND status = 'Borrowed'";
         $stmt_b = $pdo->prepare($sql_b);
         $stmt_b->execute(['loan_id' => $loan_id]);
         $brow = $stmt_b->fetch(PDO::FETCH_ASSOC);

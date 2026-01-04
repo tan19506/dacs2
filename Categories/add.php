@@ -1,100 +1,74 @@
 <?php
-
 require_once __DIR__ . '/../functions.php';
-require_once __DIR__ . '/../connect.php'; 
+require_once __DIR__ . '/../connect.php';
 
-// Yêu cầu quyền ADMIN
-require_admin(); 
+// Kiểm tra quyền Admin
+require_admin();
 
-// Khởi tạo biến
-$errors = [];
-$name = ''; // Tên danh mục
-
-// --- BƯỚC 2: XỬ LÝ FORM SUBMISSION (LOGIC & REDIRECTION) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // 1. Lấy và làm sạch dữ liệu
     $name = trim($_POST['name'] ?? '');
+    $description = trim($_POST['description'] ?? '');
 
-    // 2. Validation
     if (empty($name)) {
-        $errors[] = "Tên danh mục không được để trống.";
-    }
-
-    // 3. Nếu không có lỗi, tiến hành INSERT DỮ LIỆU
-    if (empty($errors)) {
+        set_session_message("Vui lòng nhập tên danh mục.", "danger");
+    } else {
         try {
-            // Chuẩn bị câu lệnh SQL
-            $sql = "INSERT INTO categories (name) VALUES (?)";
-            $stmt = $conn->prepare($sql);
+            // 1. KIỂM TRA XEM TÊN DANH MỤC ĐÃ TỒN TẠI CHƯA
+            $sql_check = "SELECT COUNT(*) FROM categories WHERE name = :name";
+            $stmt_check = $pdo->prepare($sql_check);
+            $stmt_check->execute([':name' => $name]);
             
-            // Kiểm tra lỗi prepare
-            if ($stmt === false) {
-                 throw new Exception("Lỗi chuẩn bị truy vấn: " . $conn->error);
+            if ($stmt_check->fetchColumn() > 0) {
+                // Nếu đã tồn tại, báo lỗi thay vì để SQL văng lỗi Integrity constraint
+                set_session_message("Danh mục '$name' đã tồn tại trong hệ thống. Vui lòng chọn tên khác.", "warning");
+            } else {
+                // 2. NẾU CHƯA CÓ THÌ MỚI THỰC HIỆN INSERT
+                $sql = "INSERT INTO categories (name, description) VALUES (:name, :description)";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([
+                    ':name' => $name,
+                    ':description' => $description
+                ]);
+
+                set_session_message("Thêm danh mục thành công!", "success");
+                header("Location: list.php");
+                exit;
             }
-            
-            // Bind và thực thi
-            $stmt->bind_param("s", $name);
-            $stmt->execute();
-            $stmt->close();
-
-            // Đặt thông báo thành công
-            set_session_message("Đã thêm danh mục '{$name}' thành công!", 'success');
-            
-            // Dòng CHUYỂN HƯỚNG THÀNH CÔNG (Dòng 22 cũ được thực thi ở đây)
-            header('Location: list.php'); 
-            exit(); 
-
-        } catch (Exception $e) {
-            $errors[] = "Lỗi CSDL khi thêm danh mục: " . $e->getMessage();
+        } catch (PDOException $e) {
+            // Trường hợp có lỗi khác phát sinh
+            set_session_message("Lỗi hệ thống: " . $e->getMessage(), "danger");
         }
     }
 }
 
-// --- BƯỚC 3: HIỂN THỊ FORM (BẮT ĐẦU OUTPUT HTML) ---
-
-// Include Header
 include __DIR__ . '/../layouts/header.php';
 ?>
 
 <div class="container my-5">
-    <h1 class="mb-4 display-6 fw-bold text-primary">
-        <i class="bi-plus-circle-fill me-2"></i> Thêm Danh Mục Mới
-    </h1>
-
-    <?php 
-    // Hiển thị lỗi nếu có
-    if (!empty($errors)): ?>
-        <div class="alert alert-danger shadow-sm">
-            <h5 class="alert-heading"><i class="bi-exclamation-triangle-fill me-2"></i> Lỗi xảy ra:</h5>
-            <ul class="mb-0">
-                <?php foreach ($errors as $error): ?>
-                    <li><?= htmlspecialchars($error) ?></li>
-                <?php endforeach; ?>
-            </ul>
-        </div>
-    <?php endif; ?>
-
-    <div class="card shadow-lg border-0 rounded-4">
-        <div class="card-body p-4 p-md-5">
-            <form action="add.php" method="POST">
-
-                <!-- Tên Danh mục -->
-                <div class="mb-4">
-                    <label for="name" class="form-label fw-bold">Tên Danh Mục</label>
-                    <input type="text" class="form-control form-control-lg" id="name" name="name" 
-                           value="<?= htmlspecialchars($name) ?>" required>
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white py-3">
+                    <h5 class="mb-0"><i class="bi bi-folder-plus me-2"></i>Thêm Danh Mục Mới</h5>
                 </div>
-
-                <!-- Nút Submit -->
-                <div class="d-grid gap-2 d-md-flex justify-content-md-end pt-3">
-                    <a href="list.php" class="btn btn-outline-secondary btn-lg rounded-pill px-4">
-                        <i class="bi-arrow-left-circle me-2"></i> Quay lại
-                    </a>
-                    <button type="submit" class="btn btn-primary btn-lg rounded-pill px-4">
-                        <i class="bi-save-fill me-2"></i> Lưu Danh Mục
-                    </button>
+                <div class="card-body p-4">
+                    <?= display_session_message() ?>
+                    <form action="add.php" method="POST">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Tên danh mục</label>
+                            <input type="text" name="name" class="form-control" placeholder="Ví dụ: Công nghệ thông tin" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Mô tả</label>
+                            <textarea name="description" class="form-control" rows="4" placeholder="Nhập mô tả ngắn gọn..."></textarea>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary px-4">Lưu lại</button>
+                            <a href="list.php" class="btn btn-outline-secondary px-4">Quay lại</a>
+                        </div>
+                    </form>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 </div>

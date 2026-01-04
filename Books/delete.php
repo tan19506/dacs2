@@ -1,64 +1,66 @@
-<?php 
+<?php
+require_once __DIR__ . '/../functions.php';
+require_once __DIR__ . '/../connect.php'; 
 
-require_once '../functions.php';
-require_admin(); // YÊU CẦU QUYỀN ADMIN ĐỂ THỰC HIỆN CHỨC NĂNG XÓA
-include '../connect.php'; 
+require_admin(); 
+start_session_if_not_started();
 
-// 1. Kiểm tra ID sách hợp lệ
-if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
-    header('Location: list.php?error=invalid_id');
+// 1. Kiểm tra ID sách
+$book_id = (int)($_GET['id'] ?? 0);
+if ($book_id <= 0) {
+    set_session_message("ID sách không hợp lệ.", "danger");
+    header('Location: list.php');
     exit();
 }
-$book_id = (int)$_GET['id'];
-$uploadDir = "../uploads/";
 
-// Bắt đầu Transaction
+// 2. KIỂM TRA RÀNG BUỘC: Sách có đang được mượn không?
+// Giả sử bạn có bảng 'loans' hoặc 'borrow_details' với cột status = 'borrowed'
+$check_loan = $conn->prepare("SELECT COUNT(*) as count FROM loans WHERE book_id = ? AND status = 'borrowed'");
+$check_loan->bind_param("i", $book_id);
+$check_loan->execute();
+$is_borrowed = $check_loan->get_result()->fetch_assoc()['count'];
+
+if ($is_borrowed > 0) {
+    set_session_message("Không thể xóa! Cuốn sách này đang có người mượn.", "warning");
+    header('Location: list.php');
+    exit();
+}
+
+// 3. THỰC HIỆN XÓA (Transaction)
 $conn->begin_transaction();
 try {
-    // 2. Lấy tên file ảnh bìa cũ để chuẩn bị xóa
-    $stmt_fetch_cover = $conn->prepare("SELECT cover FROM books WHERE id = ?");
-    $stmt_fetch_cover->bind_param("i", $book_id);
-    $stmt_fetch_cover->execute();
-    $result_cover = $stmt_fetch_cover->get_result();
-    $book_data = $result_cover->fetch_assoc();
-    $cover_file = $book_data['cover'] ?? null;
-    $stmt_fetch_cover->close();
+    // Lấy thông tin ảnh trước khi xóa bản ghi
+    $stmt = $conn->prepare("SELECT cover FROM books WHERE id = ?");
+    $stmt->bind_param("i", $book_id);
+    $stmt->execute();
+    $book = $stmt->get_result()->fetch_assoc();
 
-    // 3. Xóa bản ghi liên kết trong bảng book_author
-    $stmt_delete_link = $conn->prepare("DELETE FROM book_author WHERE book_id = ?");
-    $stmt_delete_link->bind_param("i", $book_id);
-    if (!$stmt_delete_link->execute()) {
-        throw new Exception("Lỗi khi xóa liên kết tác giả.");
-    }
-    $stmt_delete_link->close();
+    // Xóa liên kết tác giả (Bảng phụ trước)
+    $stmt_ba = $conn->prepare("DELETE FROM book_author WHERE book_id = ?");
+    $stmt_ba->bind_param("i", $book_id);
+    $stmt_ba->execute();
 
-    // 4. Xóa bản ghi sách trong bảng books
-    $stmt_delete_book = $conn->prepare("DELETE FROM books WHERE id = ?");
-    $stmt_delete_book->bind_param("i", $book_id);
-    if (!$stmt_delete_book->execute()) {
-        throw new Exception("Lỗi khi xóa sách.");
-    }
-    $stmt_delete_book->close();
+    // Xóa sách (Bảng chính sau)
+    $stmt_b = $conn->prepare("DELETE FROM books WHERE id = ?");
+    $stmt_b->bind_param("i", $book_id);
+    $stmt_b->execute();
 
-    // 5. Xóa file ảnh bìa trên server (Chỉ thực hiện sau khi CSDL thành công)
-    if ($cover_file && is_file($uploadDir . $cover_file)) {
-        // Sử dụng @unlink để tránh lỗi hiển thị nếu file không tồn tại
-        @unlink($uploadDir . $cover_file);
-    }
-    
-    // 6. Hoàn tất Transaction
+    // 4. Hoàn tất và xóa file
     $conn->commit();
-    header('Location: list.php?success=delete');
-    exit();
+
+    if (!empty($book['cover'])) {
+        $full_path = __DIR__ . '/..' . $book['cover'];
+        if (file_exists($full_path)) {
+            @unlink($full_path);
+        }
+    }
+
+    set_session_message("Đã xóa sách thành công.", "success");
 
 } catch (Exception $e) {
-    // Hoàn tác nếu có bất kỳ lỗi nào xảy ra
     $conn->rollback();
-    // Chuyển hướng về trang danh sách với thông báo lỗi
-    header('Location: list.php?error=delete_failed&msg=' . urlencode($e->getMessage()));
-    exit();
+    set_session_message("Lỗi hệ thống: " . $e->getMessage(), "danger");
 }
-// Nếu không phải POST, người dùng đang truy cập trực tiếp, tự động redirect về list.php
+
 header('Location: list.php');
 exit();
-?>

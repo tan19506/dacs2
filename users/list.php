@@ -1,122 +1,116 @@
 <?php
-
 require_once __DIR__ . '/../connect.php';
 require_once __DIR__ . '/../functions.php';
 
-// BƯỚC QUAN TRỌNG: Kiểm tra và yêu cầu quyền Admin
-// Giả định hàm require_admin() và set_session_message() có trong functions.php
+// Kiểm tra quyền Admin
 require_admin();
 
-// Định nghĩa tiêu đề trang
 $page_title = "Quản Lý Người Dùng";
 
 try {
-    if ($pdo === null) {
-        throw new PDOException('Database connection failed');
-    }
-    $stmt = $pdo->query("SELECT id, username, role FROM users ORDER BY role DESC, username ASC");
-    $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    // Xử lý lỗi CSDL và thiết lập thông báo lỗi
-    set_session_message('Lỗi truy vấn cơ sở dữ liệu: Vui lòng kiểm tra lại kết nối CSDL và cấu trúc bảng users.', 'danger');
-    $users = []; // Đảm bảo $users là mảng rỗng nếu có lỗi
+    if ($pdo === null) throw new Exception('Không thể kết nối CSDL.');
+    
+    // Lấy danh sách người dùng, sắp xếp Admin lên đầu
+    $stmt = $pdo->query("SELECT id, username, role, email FROM users ORDER BY role ASC, username ASC");
+    $users = $stmt->fetchAll();
+} catch (Exception $e) {
+    set_session_message('Lỗi: ' . $e->getMessage(), 'danger');
+    $users = [];
 }
 
 include __DIR__ . '/../layouts/header.php';
 ?>
 
 <div class="container my-5">
-    <h1 class="text-primary mb-4"><?= $page_title ?></h1>
-
-    <!-- Hiển thị thông báo (thành công, lỗi) -->
-    <?= display_session_message() ?>
-
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <!-- Quay lại Dashboard -->
-        <a href="/Admin/index.php" class="btn btn-secondary rounded-pill">
-            <i class="bi-arrow-left-circle-fill"></i> Quay lại Dashboard
-        </a>
-        <!-- Nút Thêm Người Dùng Mới -->
-        <a href="/Users/add.php" class="btn btn-success rounded-pill">
-            <i class="bi-person-plus-fill"></i> Thêm Người Dùng Mới
-        </a>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-primary fw-bold"><i class="bi bi-people-fill me-2"></i><?= $page_title ?></h1>
+        <div>
+            <a href="/Admin/index.php" class="btn btn-outline-secondary rounded-pill me-2">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+        </div>
     </div>
 
+    <?= display_session_message() ?>
+
     <?php if (empty($users)): ?>
-        <!-- Nếu không có người dùng -->
-        <div class="alert alert-warning text-center rounded-4 shadow-sm">
-            Hiện chưa có người dùng nào trong hệ thống.
+        <div class="alert alert-light text-center border rounded-4 py-5 shadow-sm">
+            <i class="bi bi-inbox display-1 text-muted"></i>
+            <p class="mt-3">Chưa có người dùng nào được đăng ký.</p>
         </div>
     <?php else: ?>
-        <!-- Bảng danh sách người dùng -->
-        <div class="table-responsive bg-white rounded-4 shadow p-4">
-            <table class="table table-hover table-striped align-middle">
-                <thead class="table-dark">
-                    <tr>
-                        <th>ID</th>
-                        <th>Tên Đăng Nhập</th>
-                        <th>Vai Trò</th>
-                        <th class="text-center">Thao Tác</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($users as $user): ?>
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-primary text-white">
                         <tr>
-                            <td class="fw-bold"><?= htmlspecialchars($user['id']) ?></td>
-                            <td><?= htmlspecialchars($user['username']) ?></td>
+                            <th class="ps-4">ID</th>
+                            <th>Người dùng</th>
+                            <th>Email</th>
+                            <th>Vai Trò</th>
+                            <th class="text-center">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($users as $user): ?>
+                        <tr>
+                            <td class="ps-4 fw-bold text-muted">#<?= $user['id'] ?></td>
                             <td>
-                                <?php 
-                                    $role = htmlspecialchars($user['role']);
-                                    if ($role === 'admin') {
-                                        echo '<span class="badge bg-danger p-2">Quản Trị Viên</span>';
-                                    } elseif ($role === 'user') {
-                                        echo '<span class="badge bg-primary p-2">Người Dùng</span>';
-                                    } else {
-                                        echo '<span class="badge bg-secondary p-2">' . $role . '</span>';
-                                    }
-                                ?>
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-light rounded-circle p-2 me-2">
+                                        <i class="bi bi-person text-primary"></i>
+                                    </div>
+                                    <span class="fw-bold"><?= htmlspecialchars($user['username']) ?></span>
+                                </div>
                             </td>
-                            <td class="text-center" style="width: 300px;">
-                                
-                                <!-- NÚT MỚI: XEM HỒ SƠ MƯỢN -->
-                                <a href="/Borrowing/user_profile.php?id=<?= $user['id'] ?>" class="btn btn-sm btn-dark me-2 rounded-pill" title="Xem hồ sơ mượn">
-                                    <i class="bi-book-half"></i> Hồ Sơ Mượn
-                                </a>
-
-                                <!-- Nút Sửa -->
-                                <a href="/Users/edit.php?id=<?= $user['id'] ?>" class="btn btn-sm btn-info text-white me-2 rounded-pill" title="Chỉnh sửa">
-                                    <i class="bi-pencil-square"></i> Sửa
-                                </a>
-                                <!-- Nút Xóa (Dùng JavaScript để xác nhận trước khi xóa) -->
-                                <button type="button" class="btn btn-sm btn-danger rounded-pill" onclick="confirmDelete(<?= $user['id'] ?>, '<?= htmlspecialchars($user['username'], ENT_QUOTES) ?>')" title="Xóa">
-                                    <i class="bi-trash-fill"></i> Xóa
-                                </button>
+                            <td><?= htmlspecialchars($user['email']) ?></td>
+                            <td>
+                                <?php if ($user['role'] === 'admin'): ?>
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 rounded-pill">Quản trị viên</span>
+                                <?php else: ?>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 rounded-pill">Người dùng</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="text-center pe-4">
+                                <div class="btn-group shadow-sm rounded-pill bg-white p-1">
+                                    <a href="/Loans/user_history.php?user_id=<?= $user['id'] ?>" class="btn btn-sm btn-light border-0 text-dark" title="Lịch sử mượn trả">
+                                        <i class="bi bi-clock-history"></i>
+                                    </a>
+                                    <a href="/Users/edit.php?id=<?= $user['id'] ?>" class="btn btn-sm btn-light border-0 text-info" title="Sửa thông tin">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                    
+                                    <?php if ($user['id'] != $_SESSION['user_id']): ?>
+                                    <button type="button" class="btn btn-sm btn-light border-0 text-danger" 
+                                            onclick="confirmDelete(<?= $user['id'] ?>, '<?= htmlspecialchars($user['username'], ENT_QUOTES) ?>')">
+                                        <i class="bi bi-trash3-fill"></i>
+                                    </button>
+                                    <?php else: ?>
+                                    <button class="btn btn-sm btn-light border-0 text-muted" disabled title="Bạn không thể tự xóa mình">
+                                        <i class="bi bi-slash-circle"></i>
+                                    </button>
+                                    <?php endif; ?>
+                                </div>
                             </td>
                         </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
-        <!-- Form Ẩn để thực hiện Xóa -->
-        <form id="deleteForm" method="POST" action="/Users/delete.php" style="display: none;">
+        <form id="deleteForm" method="POST" action="/Users/delete_process.php">
             <input type="hidden" name="user_id" id="userIdToDelete">
         </form>
 
         <script>
-        /**
-         * Hàm xác nhận xóa người dùng
-         */
         function confirmDelete(userId, username) {
-            // Sử dụng window.confirm tạm thời (nên thay bằng Modal Bootstrap)
-            if (window.confirm('Bạn có chắc chắn muốn xóa người dùng "' + username + '" (ID: ' + userId + ')?\nHành động này không thể hoàn tác.')) {
-                // Đặt ID vào form ẩn và gửi đi
+            if (confirm('Bạn có chắc muốn xóa "' + username + '"?\nTất cả lịch sử mượn sách liên quan sẽ bị xóa vĩnh viễn.')) {
                 document.getElementById('userIdToDelete').value = userId;
                 document.getElementById('deleteForm').submit();
             }
         }
         </script>
-
     <?php endif; ?>
 </div>
 

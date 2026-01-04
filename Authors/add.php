@@ -1,72 +1,87 @@
 <?php
-
 require_once '../functions.php';
 require_once '../connect.php'; 
 require_admin();
 
-include '../layouts/header.php';
-
 $name = '';
 $error = '';
 
+// --- XỬ LÝ LOGIC (SERVER-SIDE) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $name = trim($_POST['name']);
+    $name = trim($_POST['name'] ?? '');
 
-    if (empty($name)) {
-        $error = 'Tên tác giả không được để trống.';
-    } else {
-        // Kiểm tra xem tên tác giả đã tồn tại chưa
-        $stmt_check = $conn->prepare("SELECT id FROM authors WHERE name = ?");
-        $stmt_check->bind_param("s", $name);
-        $stmt_check->execute();
-        $result_check = $stmt_check->get_result();
-
-        if ($result_check->num_rows > 0) {
-            $error = 'Tên tác giả đã tồn tại trong hệ thống.';
+   if (empty($name)) {
+    $error = 'Tên tác giả không được để trống.';
+} else {
+    try {
+        // 1. Kiểm tra tồn tại (Sử dụng PDO và fetchColumn)
+        $stmt_check = $pdo->prepare("SELECT COUNT(*) FROM authors WHERE name = :name");
+        $stmt_check->execute([':name' => $name]);
+        
+        if ($stmt_check->fetchColumn() > 0) {
+            $error = "Tên tác giả " . htmlspecialchars($name) . " đã tồn tại.";
         } else {
-            // Thêm mới tác giả
-            $stmt = $conn->prepare("INSERT INTO authors (name) VALUES (?)");
-            $stmt->bind_param("s", $name);
+            // 2. Thêm mới
+            $stmt = $pdo->prepare("INSERT INTO authors (name) VALUES (:name)");
             
-            if ($stmt->execute()) {
-                set_session_message('Thêm tác giả <strong>' . htmlspecialchars($name) . '</strong> thành công!', 'success');
-                redirect('list.php');
+            if ($stmt->execute([':name' => $name])) {
+                set_session_message("Đã thêm tác giả " . htmlspecialchars($name) . " thành công!", 'success');
+                header('Location: list.php');
+                exit();
             } else {
-                $error = 'Lỗi CSDL khi thêm tác giả: ' . $conn->error;
+                $error = 'Lỗi hệ thống: Không thể lưu dữ liệu.';
             }
-            $stmt->close();
         }
-        $stmt_check->close();
+    } catch (PDOException $e) {
+        $error = 'Lỗi cơ sở dữ liệu: ' . $e->getMessage();
     }
 }
+}
+
+// --- HIỂN THỊ GIAO DIỆN (HTML) ---
+include '../layouts/header.php';
 ?>
 
-<div class="container mt-5">
+<div class="container py-5">
     <div class="row justify-content-center">
-        <div class="col-md-6">
-            <h2 class="mb-4 text-success">
-                <i class="bi-plus-circle me-2"></i> Thêm Tác Giả Mới
-            </h2>
-            <div class="card shadow-sm">
-                <div class="card-body">
+        <div class="col-lg-5 col-md-7">
+            
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="list.php" class="text-decoration-none">Tác giả</a></li>
+                    <li class="breadcrumb-item active">Thêm mới</li>
+                </ol>
+            </nav>
+
+            <div class="card border-0 shadow-lg rounded-4">
+                <div class="card-header bg-success py-3">
+                    <h5 class="card-title mb-0 text-white fw-bold text-center">
+                        <i class="bi bi-person-plus-fill me-2"></i> THÊM TÁC GIẢ MỚI
+                    </h5>
+                </div>
+                
+                <div class="card-body p-4 p-md-5">
                     <?php if ($error): ?>
-                        <div class="alert alert-danger"><?= $error ?></div>
+                        <div class="alert alert-danger border-0 shadow-sm mb-4">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i> <?= $error ?>
+                        </div>
                     <?php endif; ?>
 
-                    <form method="POST" action="add.php">
-                        <div class="mb-3">
-                            <label for="name" class="form-label fw-bold">Tên Tác Giả:</label>
-                            <input type="text" class="form-control" id="name" name="name" 
-                                   value="<?= htmlspecialchars($name) ?>" required>
+                    <form method="POST">
+                        <div class="mb-4">
+                            <label for="name" class="form-label fw-bold text-muted small text-uppercase">Họ và Tên Tác Giả</label>
+                            <input type="text" 
+                                   class="form-control form-control-lg bg-light border-0 shadow-none" 
+                                   id="name" name="name" 
+                                   value="<?= htmlspecialchars($name) ?>" 
+                                   required autofocus>
                         </div>
                         
-                        <div class="d-flex justify-content-between">
-                            <a href="list.php" class="btn btn-secondary">
-                                <i class="bi-arrow-left-circle me-1"></i> Quay lại
-                            </a>
-                            <button type="submit" class="btn btn-success">
-                                <i class="bi-plus-lg me-1"></i> Thêm Tác Giả
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg rounded-pill shadow-sm">
+                                <i class="bi bi-check-circle me-1"></i> Xác nhận thêm
                             </button>
+                            <a href="list.php" class="btn btn-link text-decoration-none text-muted">Hủy và quay lại</a>
                         </div>
                     </form>
                 </div>
