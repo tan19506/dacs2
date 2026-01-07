@@ -47,7 +47,7 @@ try {
                 <tbody>
                     <?php foreach ($my_loans as $loan): 
                         // CHUẨN HÓA LOGIC TRẠNG THÁI
-                        // Chuyển về viết thường để so sánh chính xác nếu DB lưu 'Returned' hoặc 'returned'
+                        // Chuyển về viết thường để so sánh chính xác
                         $status = strtolower($loan['status']);
                         $is_overdue = (strtotime($loan['due_date']) < time() && $status !== 'Returned');
                     ?>

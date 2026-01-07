@@ -66,7 +66,7 @@ try {
     ]);
 
     // 4.2 Cập nhật giảm số lượng trong kho
-    // Thêm điều kiện quantity > 0 để tránh lỗi đồng thời (race condition)
+    // Thêm điều kiện quantity > 0 để tránh lỗi đồng thời
     $sql_update_book = "UPDATE books SET quantity = quantity - 1 WHERE id = :book_id AND quantity > 0";
     $stmt_update = $pdo->prepare($sql_update_book);
     $stmt_update->execute(['book_id' => $book_id]);

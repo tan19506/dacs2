@@ -11,7 +11,7 @@ if ($id <= 0) {
     exit();
 }
 
-// 2. KIỂM TRÀ RÀNG BUỘC (Rất quan trọng)
+// 2. KIỂM TRÀ RÀNG BUỘC 
 // Kiểm tra xem có cuốn sách nào đang thuộc danh mục này không
 $check_stmt = $conn->prepare("SELECT COUNT(*) as book_count FROM books WHERE category_id = ?");
 $check_stmt->bind_param("i", $id);

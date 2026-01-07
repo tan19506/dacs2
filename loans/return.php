@@ -21,7 +21,6 @@ $raw_loan_id = null;
 if (isset($_GET['loan_id']) && is_numeric($_GET['loan_id'])) {
     $raw_loan_id = $_GET['loan_id'];
 } elseif (isset($_GET['id']) && is_numeric($_GET['id'])) {
-    // Một số link dùng `id` thay vì `loan_id` — hỗ trợ cả hai
     $raw_loan_id = $_GET['id'];
 }
 
@@ -45,7 +44,7 @@ try {
 
     $using_borrowings_table = false;
 
-    // Nếu không tìm thấy trong bảng `loans`, thử trong bảng `borrowings` (một số nơi trong project dùng borrowings)
+    // Nếu không tìm thấy trong bảng `loans`, thử trong bảng `borrowings`
     if (!$loan) {
         $sql_b = "SELECT id, book_id, user_id FROM borrowings WHERE id = :loan_id AND status = 'Borrowed'";
         $stmt_b = $pdo->prepare($sql_b);

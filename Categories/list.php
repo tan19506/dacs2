@@ -17,7 +17,6 @@ try {
     die("Lỗi truy vấn: " . $e->getMessage());
 }
 
-// Sửa đường dẫn Header (Lùi 1 cấp)
 include __DIR__ . '/../layouts/header.php'; 
 ?>
 
@@ -42,7 +41,7 @@ include __DIR__ . '/../layouts/header.php';
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if (count($categories) > 0): // Thay cho $num_rows ?>
+                    <?php if (count($categories) > 0): ?>
                         <?php foreach ($categories as $cat): ?>
                         <tr>
                             <td><?= $cat['id'] ?></td>

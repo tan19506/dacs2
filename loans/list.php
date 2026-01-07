@@ -6,8 +6,7 @@ require_admin();
 $message = display_session_message();
 
 try {
-    // Tự động cập nhật trạng thái quá hạn trong CSDL trước khi hiển thị (Tùy chọn)
-    // Hoặc xử lý logic hiển thị như dưới đây:
+    // Tự động cập nhật trạng thái quá hạn trong CSDL trước khi hiển thị 
     
     $sql = "
         SELECT 

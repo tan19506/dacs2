@@ -46,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $post_due_date = $_POST['due_date'];
 
     try {
-        // KIỂM TRA RÀNG BUỘC NGÀY THÁNG (MỚI)
+        // KIỂM TRA RÀNG BUỘC NGÀY THÁNG 
         $loan_ts = strtotime($post_loan_date);
         $due_ts = strtotime($post_due_date);
 

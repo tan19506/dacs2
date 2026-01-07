@@ -21,9 +21,7 @@ try {
     die("LỖI KẾT NỐI HỆ THỐNG: " . $e->getMessage());
 }
 
-/**
- * PDOWrapper: Giúp code cũ (mysqli style) chạy được trên PDO
- */
+
 class PDOWrapper {
     private $pdo;
     public $error = '';
@@ -98,5 +96,4 @@ class PDOWrapperResult {
     public function num_rows() { return $this->stmt->rowCount(); }
 }
 
-// Khởi tạo biến $conn huyền thoại để các file khác sử dụng
 $conn = new PDOWrapper($pdo);

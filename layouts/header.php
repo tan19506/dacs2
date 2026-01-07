@@ -21,7 +21,7 @@ start_session_if_not_started();
         .dropdown-menu { border-radius: 12px; padding: 10px; }
         .btn-brand { border-radius: 8px; font-weight: 600; }
         /* Đảm bảo footer luôn ở dưới cùng */
-        body { display: flex; flex-column: column; min-height: 100vh; }
+        body { display: flex; flex-direction: column; min-height: 100vh; }
         main { flex: 1 0 auto; }
     </style>
 </head>

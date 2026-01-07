@@ -14,7 +14,6 @@ if ($book_id <= 0) {
 }
 
 // 2. KIỂM TRA RÀNG BUỘC: Sách có đang được mượn không?
-// Giả sử bạn có bảng 'loans' hoặc 'borrow_details' với cột status = 'borrowed'
 $check_loan = $conn->prepare("SELECT COUNT(*) as count FROM loans WHERE book_id = ? AND status = 'borrowed'");
 $check_loan->bind_param("i", $book_id);
 $check_loan->execute();

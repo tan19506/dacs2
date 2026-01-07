@@ -31,7 +31,6 @@ function display_session_message() {
         $message = $_SESSION['message'];
         $type = $_SESSION['message_type'] ?? 'info';
         
-        // Xóa ngay để khi F5 không hiện lại
         unset($_SESSION['message']);
         unset($_SESSION['message_type']);
 
@@ -49,7 +48,7 @@ function require_admin() {
     start_session_if_not_started();
     if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? 'user') !== 'admin') {
         set_session_message('Bạn không có quyền truy cập vào trang này.', 'danger');
-        redirect('/index.php'); // Đảm bảo đường dẫn này đúng với project của bạn
+        redirect('/index.php');
     }
 }
 
@@ -60,7 +59,7 @@ function format_date($date) {
 }
 
 /**
- * 6. Hàm xử lý Upload ảnh bìa sách (Chỉ dùng PHP thuần)
+ * 6. Hàm xử lý Upload ảnh bìa sách
  * Trả về tên file mới hoặc false nếu lỗi
  */
 function upload_cover($file_input) {

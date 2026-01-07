@@ -4,8 +4,6 @@ require_once __DIR__ . '/../functions.php';
 start_session_if_not_started();
 
 // 1. Lưu thông báo vào session trước khi hủy (tùy chọn)
-// Tuy nhiên, vì chúng ta hủy toàn bộ session, thông báo nên được đặt SAU khi khởi tạo session mới
-// hoặc sử dụng biến tạm. Cách đơn giản nhất là redirect kèm thông báo qua hàm có sẵn.
 
 // 2. Xóa tất cả biến session
 $_SESSION = array();

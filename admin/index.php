@@ -33,7 +33,6 @@ function get_count($pdo, $table, $where = '', $params = []) {
 // Lấy số liệu thống kê
 $total_books  = get_count($pdo, 'books');
 $total_users  = get_count($pdo, 'users');
-// Lưu ý: Status 'Borrowed' phải viết hoa chữ B để khớp với ENUM trong SQL
 $current_loans = get_count($pdo, 'loans', "status = ?", ['Borrowed']);
 ?>
 
