@@ -46,6 +46,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $post_due_date = $_POST['due_date'];
 
     try {
+        // KIỂM TRA RÀNG BUỘC NGÀY THÁNG (MỚI)
+        $loan_ts = strtotime($post_loan_date);
+        $due_ts = strtotime($post_due_date);
+
+        if ($due_ts <= $loan_ts) {
+            throw new Exception("Hạn trả dự kiến phải sau ngày mượn ít nhất 1 ngày.");
+        }
         // Kiểm tra 1: Còn sách không?
         if ($book['quantity'] <= 0) {
             throw new Exception("Sách hiện đã hết trong kho.");

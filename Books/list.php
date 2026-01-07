@@ -82,7 +82,7 @@ $books = $stmt_main->get_result()->fetch_all(MYSQLI_ASSOC);
                     </div>
                 </div>
                 <div class="col-md-2 d-grid">
-                    <button class="btn btn-dark" type="submit">Lọc dữ liệu</button>
+                    <button class="btn btn-dark" type="submit">Tìm Kiếm</button>
                 </div>
             </form>
         </div>
